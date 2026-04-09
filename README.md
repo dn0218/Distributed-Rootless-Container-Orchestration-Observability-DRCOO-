@@ -23,6 +23,7 @@ cd Distributed-Rootless-Container-Orchestration-Observability-DRCOO-
 
 # Run the playbook / 执行脚本
 ansible-playbook -i inventory.ini playbook.yml
+```
 
 <img width="1035" height="578" alt="Screenshot 2026-04-09 114731" src="https://github.com/user-attachments/assets/c325484a-0b27-4898-afe3-d979bc3daf67" />
 
