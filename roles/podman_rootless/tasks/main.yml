@@ -1,0 +1,30 @@
+---
+# 1. 确保用户 danny 存在，并配置 SubUID/SubGID (容器内 root 映射)
+- name: 确保 podman 用户存在
+  ansible.builtin.user:
+    name: "{{ podman_user }}"
+    shell: /bin/bash
+    generate_ssh_key: yes
+
+# 2. 开启 Linger（关键：解决持久化问题）
+# 这允许 systemd --user 实例在用户未登录时依然运行
+- name: 启用用户 Linger 状态
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger {{ podman_user }}"
+    creates: "/var/lib/systemd/linger/{{ podman_user }}"
+
+# 3. 创建 Quadlet 标准存放目录
+- name: 创建 Quadlet 配置目录
+  ansible.builtin.file:
+    path: "/home/{{ podman_user }}/.config/containers/systemd"
+    state: directory
+    owner: "{{ podman_user }}"
+    group: "{{ podman_user }}"
+    mode: '0755'
+
+# 4. 环境准备：确保 dbus 处于激活状态 (Rootless 依赖)
+- name: 确保用户级 systemd 能够通过 DBUS 通信
+  ansible.builtin.systemd:
+    name: user@{{ user_uid }}.service
+    state: started
+    enabled: yes

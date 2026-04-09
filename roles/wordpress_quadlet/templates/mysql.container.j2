@@ -1,0 +1,14 @@
+[Unit]
+Description=MariaDB Rootless Container
+
+[Container]
+Image=docker.io/library/mariadb:10.11
+Environment=MARIADB_ROOT_PASSWORD=password123
+# 统一数据库名称
+Environment=MARIADB_DATABASE=wordpress
+# 修正内部路径为 /var/lib/mysql
+Volume=db_data.volume:/var/lib/mysql:Z
+Network=microservice_net.network
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,43 @@
+---
+- name: 下发网络与存储单元
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ quadlet_dir }}/{{ item }}"
+    owner: "{{ podman_user }}"
+    group: "{{ podman_user }}"
+  loop:
+    - "{{ container_network_name }}.network"
+    - db_data.volume
+
+- name: 下发容器单元 (MySQL & WordPress)
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ quadlet_dir }}/{{ item }}"
+    owner: "{{ podman_user }}"
+  loop:
+    - mysql.container
+    - wordpress.container
+  notify: restart_systemd_user
+
+- name: 强制立即刷新 systemd 生成服务单元
+  ansible.builtin.systemd:
+    scope: user
+    daemon_reload: yes
+  become: yes
+  become_user: "{{ podman_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_uid }}"
+
+- name: 启动服务
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    scope: user
+    state: started
+    enabled: yes
+  become: yes
+  become_user: "{{ podman_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_uid }}"
+  loop:
+    - mysql
+    - wordpress

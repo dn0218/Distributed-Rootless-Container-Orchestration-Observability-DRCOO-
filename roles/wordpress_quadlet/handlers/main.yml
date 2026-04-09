@@ -1,0 +1,10 @@
+---
+- name: restart_systemd_user
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+    # 这里的 name 我们留空或者动态处理，因为 Quadlet 刷新是针对整个用户实例的
+  become: yes
+  become_user: "{{ podman_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_uid }}"

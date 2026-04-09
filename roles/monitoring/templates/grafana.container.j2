@@ -1,0 +1,20 @@
+[Unit]
+Description=Grafana Monitoring Dashboard
+After=network-online.target
+
+[Container]
+Image=docker.io/grafana/grafana-oss:latest
+User=0
+Network=host
+PublishPort={{ grafana_port }}:3000
+
+# 挂载配置与 JSON 文件
+Volume={{ monitoring_data_dir }}/grafana/provisioning:/etc/grafana/provisioning
+Volume={{ monitoring_data_dir }}/grafana/dashboards:/var/lib/grafana/dashboards
+Volume={{ monitoring_data_dir }}/grafana/data:/var/lib/grafana
+
+# 设置管理员初始密码
+Environment=GF_SECURITY_ADMIN_PASSWORD=admin
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,11 @@
+---
+- name: restart_systemd_user
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: "{{ item }}"
+    state: started  # 使用 started 配合 daemon_reload 往往更稳
+    scope: user
+    enabled: yes
+  loop:
+    - prometheus
+    - grafana

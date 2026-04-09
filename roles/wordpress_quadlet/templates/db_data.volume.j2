@@ -1,0 +1,8 @@
+[Unit]
+Description=MySQL Data Persistence
+
+[Volume]
+# Quadlet 会在 /home/danny/.local/share/containers/storage/volumes 下自动创建
+User={{ podman_user }}
+Group={{ podman_user }}
+Label=app=wordpress

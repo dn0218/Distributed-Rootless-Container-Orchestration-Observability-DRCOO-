@@ -1,0 +1,56 @@
+---
+- name: "进阶项目：基于 Podman Quadlet 的 Rootless 微服务与监控系统部署"
+  hosts: all
+  become: yes
+  tasks:
+    - name: 确保所有节点安装了 Podman
+      ansible.builtin.dnf:
+        name: podman
+        state: present
+
+# --- 第一阶段：权限攻关 ---
+- name: "配置 Rootless 环境与 Linger 状态"
+  hosts: all
+  become: yes
+  roles:
+    - role: podman_rootless
+
+# --- 第二阶段：微服务业务部署 ---
+- name: "在 Rocky 10 上部署 WordPress 微服务"
+  hosts: managed_nodes  # 指向你的 Rocky 10 节点组
+  become: yes
+  # 以 danny 用户身份执行 Quadlet 操作
+  vars:
+    ansible_become_user: "{{ podman_user }}"
+  roles:
+    - role: wordpress_quadlet
+
+# --- 第三阶段：监控系统闭环 ---
+- name: "全量监控：部署 Node Exporter 与 Prometheus/Grafana"
+  hosts: all
+  become: yes
+  # 移除这里的 ansible_become_user: "{{ podman_user }}"
+  tasks:
+    - name: "部署采集端 (Node Exporter)"
+      include_role:
+        name: monitoring
+      when: "'managed_nodes' in group_names"
+      vars:
+        deploy_mode: "agent"
+
+    - name: "部署服务端 (Monitoring Stack)"
+      include_role:
+        name: monitoring
+      when: "'control_node' in group_names"
+      vars:
+        deploy_mode: "server"
+
+  handlers:
+    - name: restart_systemd_user
+      ansible.builtin.systemd:
+        daemon_reload: yes
+        scope: user
+      become: yes
+      become_user: "{{ podman_user }}" # 必须以 danny 身份刷新
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ user_uid }}" # 关键：让 systemd 找到 danny 的总线

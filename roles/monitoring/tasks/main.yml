@@ -1,0 +1,94 @@
+---
+# === 0. 采集端逻辑 (Node Exporter) ===
+- name: "在 Rocky 上部署 Node Exporter 容器 (使用 Command 确保兼容性)"
+  ansible.builtin.command: >
+    podman run -d 
+    --name node-exporter 
+    --replace 
+    --net=host 
+    --pid=host 
+    -v "/:/host:ro,rslave" 
+    quay.io/prometheus/node-exporter:latest 
+    --path.rootfs=/host
+  when: deploy_mode == "agent"
+  become: yes
+  become_user: "{{ podman_user }}" # 以 danny 身份运行
+
+# === 1. 宿主机级配置 (共用) ===
+- name: 放行监控端口
+  ansible.posix.firewalld:
+    port: "{{ item }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - "9100"
+    - "3000"
+    - "9090"
+  when: deploy_mode == "server" or deploy_mode == "agent"
+
+# === 2. 目录初始化 (Directory Initialization) ===
+- name: 创建监控数据根目录及子目录 (带 SELinux 标签)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ podman_user }}"
+    group: "{{ podman_user }}"
+    mode: '0755'
+    setype: container_file_t  # 核心：预先打标，解决 Rootless 权限报错
+    recurse: yes
+  loop:
+    - "{{ monitoring_data_dir }}"
+    - "{{ monitoring_data_dir }}/prometheus_data"
+    - "{{ monitoring_data_dir }}/grafana/provisioning/dashboards"
+    - "{{ monitoring_data_dir }}/grafana/dashboards"
+    - "{{ monitoring_data_dir }}/grafana/data"
+
+# === 3. Prometheus 配置 (Prometheus Config) ===
+- name: 下发 Prometheus 配置文件
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_data_dir }}/prometheus.yml"
+    owner: "{{ podman_user }}"
+    setype: container_file_t
+  when: deploy_mode == "server"
+
+- name: 下发 Prometheus Quadlet 单元
+  ansible.builtin.template:
+    src: prometheus.container.j2
+    dest: "{{ quadlet_dir }}/prometheus.container"
+    owner: "{{ podman_user }}"
+    mode: '0644'
+  when: deploy_mode == "server"
+  notify: restart_systemd_user
+
+# === 4. Grafana 配置 (Grafana Config) ===
+- name: 下发 Grafana Dashboard Provider 配置
+  ansible.builtin.template:
+    src: grafana-dashboards.yaml.j2
+    dest: "{{ monitoring_data_dir }}/grafana/provisioning/dashboards/default.yaml"
+    owner: "{{ podman_user }}"
+    setype: container_file_t
+  when: deploy_mode == "server"
+
+- name: 拷贝 Node Exporter JSON 面板文件
+  ansible.builtin.copy:
+    src: dashboards/node-exporter.json
+    dest: "{{ monitoring_data_dir }}/grafana/dashboards/node-exporter.json"
+    owner: "{{ podman_user }}"
+    setype: container_file_t
+  when: deploy_mode == "server"
+
+- name: 下发 Grafana Quadlet 单元
+  ansible.builtin.template:
+    src: grafana.container.j2
+    dest: "{{ quadlet_dir }}/grafana.container"
+    owner: "{{ podman_user }}"
+    mode: '0644'
+  when: deploy_mode == "server"
+  notify: restart_systemd_user
+
+# === 5. 服务持久化 (Persistence) ===
+- name: 开启用户 Linger (确保容器在登出后继续运行)
+  ansible.builtin.command: "loginctl enable-linger {{ podman_user }}"
+  changed_when: false

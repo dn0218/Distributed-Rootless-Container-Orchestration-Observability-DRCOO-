@@ -1,0 +1,7 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://localhost:9090  # 假设在同一 Pod 或主机
+    access: proxy
+    isDefault: true

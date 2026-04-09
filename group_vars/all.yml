@@ -1,0 +1,16 @@
+---
+# 用户与权限配置
+podman_user: danny
+user_uid: 1000
+
+# 网络配置
+container_network_name: microservice_net
+
+# 监控配置
+prometheus_port: 9090
+grafana_port: 3000
+node_exporter_port: 9100
+
+# 路径定义
+quadlet_dir: "/home/{{ podman_user }}/.config/containers/systemd"
+monitoring_data_dir: "/home/{{ podman_user }}/monitoring"

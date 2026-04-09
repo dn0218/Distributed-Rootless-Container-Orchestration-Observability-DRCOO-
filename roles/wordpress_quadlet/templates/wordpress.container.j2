@@ -1,0 +1,17 @@
+[Unit]
+Description=WordPress Rootless Container
+After=mysql.service
+Wants=mysql.service
+
+[Container]
+Image=docker.io/library/wordpress:latest
+Environment=WORDPRESS_DB_HOST=systemd-mysql
+Environment=WORDPRESS_DB_USER=root
+Environment=WORDPRESS_DB_PASSWORD=password123
+# 必须与上面的 MARIADB_DATABASE 保持一致
+Environment=WORDPRESS_DB_NAME=wordpress
+Network=microservice_net.network
+PublishPort=8888:80
+
+[Install]
+WantedBy=default.target

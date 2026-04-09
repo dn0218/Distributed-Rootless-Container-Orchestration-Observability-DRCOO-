@@ -1,0 +1,8 @@
+[Unit]
+Description=Rootless Microservice Network
+
+[Network]
+# 定义容器网络的名称
+NetworkName=microservice_net
+# 开启内部 DNS 解析，方便 WordPress 通过服务名连接 MariaDB
+Internal=no

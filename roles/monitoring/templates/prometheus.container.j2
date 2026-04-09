@@ -1,0 +1,14 @@
+[Unit]
+Description=Prometheus Service
+After=network-online.target
+
+[Container]
+Image=docker.io/prom/prometheus:latest
+User=0
+Network=host
+PublishPort={{ prometheus_port }}:9090
+Volume={{ monitoring_data_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml
+Volume={{ monitoring_data_dir }}/prometheus_data:/prometheus
+
+[Install]
+WantedBy=default.target
